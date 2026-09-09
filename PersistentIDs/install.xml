@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+
+<extension>
+	<id>d2f37e3b-d5c2-4770-afc3-fa0475d70fd7</id>
+	<icon>plugins/PersistentIDs/html/images/persistentids.png</icon>
+	<name>PERSISTENTIDS</name>
+	<module>Plugins::PersistentIDs::Plugin</module>
+	<importmodule>Plugins::PersistentIDs::Importer</importmodule>
+	<version>0.0.1</version>
+	<description>PERSISTENTIDS_DESC</description>
+	<creator>Craig Drummond</creator>
+	<defaultState>
+		<mac>enabled</mac>
+		<win>enabled</win>
+		<other>enabled</other>
+	</defaultState>
+	<homepageURL>https://github.com/CDrummond/lms-persistentids</homepageURL>
+	<targetApplication>
+		<id>Logitech Media Server</id>
+		<minVersion>9.2</minVersion>
+		<maxVersion>*</maxVersion>
+	</targetApplication>
+</extension>

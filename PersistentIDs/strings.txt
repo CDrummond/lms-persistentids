@@ -1,0 +1,8 @@
+PERSISTENTIDS
+	EN	Persistent IDs
+
+PERSISTENTIDS_DESC
+	EN	Restore IDs after scans.
+
+DEBUG_PLUGIN_PERSISTENTIDS
+	EN	Persistent IDs
