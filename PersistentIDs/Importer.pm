@@ -205,7 +205,6 @@ sub _setIds {
     my ($currDbh, $prevDbh, $seqs) = @_;
     main::INFOLOG && $log->is_info && $log->info("Restore IDs");
 
-    #$currDbh->do('BEGIN IMMEDIATE');
     $currDbh->do('PRAGMA foreign_keys = OFF');
 
     #
@@ -242,8 +241,6 @@ sub _setIds {
                     $prevTrackIdsToCurr{$id} = $cid;
                     main::DEBUGLOG && $log->is_debug && $log->debug("TRACK ${url} :: ${cid} -> ${id}");
                     if (WRITE_CHANGES) {
-                        #my $usql = $currDbh->prepare_cached( qq{UPDATE tracks SET id = ? WHERE url = ?} );
-                        #$usql->execute($id, $url);
                         my $usql = $currDbh->prepare_cached( qq{UPDATE tracks SET id = ? WHERE id = ?} );
                         $usql->execute($id, $cid);
                         $usql->finish();
@@ -277,8 +274,6 @@ sub _setIds {
                         $prevContribIdsToCurr{$id} = $cid;
                         main::DEBUGLOG && $log->is_debug && $log->debug("ARTIST ${mbid} :: ${cid} -> ${id}");
                         if (WRITE_CHANGES) {
-                            #my $usql = $currDbh->prepare_cached( qq{UPDATE contributors SET id = ? WHERE musicbrainz_id = ?} );
-                            #$usql->execute($id, $mbid);
                             my $usql = $currDbh->prepare_cached( qq{UPDATE contributors SET id = ? WHERE id = ?} );
                             $usql->execute($id, $cid);
                             $usql->finish();
@@ -299,8 +294,6 @@ sub _setIds {
                         $prevContribIdsToCurr{$id} = $cid;
                         main::DEBUGLOG && $log->is_debug && $log->debug("ARTIST ${name} :: ${cid} -> ${id}");
                         if (WRITE_CHANGES) {
-                            #my $usql = $currDbh->prepare_cached( qq{UPDATE contributors SET id = ? WHERE name = ?} );
-                            #$usql->execute($id, $name);
                             my $usql = $currDbh->prepare_cached( qq{UPDATE contributors SET id = ? WHERE id = ?} );
                             $usql->execute($id, $cid);
                             $usql->finish();
@@ -338,8 +331,6 @@ sub _setIds {
                         $currAlbumIdsToPrev{$cid} = $id;
                         main::DEBUGLOG && $log->is_debug && $log->debug("ALBUM ${mbid} :: ${cid} -> ${id}");
                         if (WRITE_CHANGES) {
-                            #my $usql = $currDbh->prepare_cached( qq{UPDATE albums SET id = ? WHERE musicbrainz_id = ?} );
-                            #$usql->execute($id, $mbid);
                             my $usql = $currDbh->prepare_cached( qq{UPDATE albums SET id = ? WHERE id = ?} );
                             $usql->execute($id, $cid);
                             $usql->finish();
@@ -407,8 +398,6 @@ sub _setIds {
                     $currGenreIdsToPrev{$cid} = $id;
                     main::DEBUGLOG && $log->is_debug && $log->debug("GENRE ${name} :: ${cid} -> ${id}");
                     if (WRITE_CHANGES) {
-                        #my $usql = $currDbh->prepare_cached( qq{UPDATE genres SET id = ? WHERE name = ?} );
-                        #$usql->execute($id, $name);
                         my $usql = $currDbh->prepare_cached( qq{UPDATE genres SET id = ? WHERE id = ?} );
                         $usql->execute($id, $cid);
                         $usql->finish();
@@ -441,8 +430,6 @@ sub _setIds {
                     $currWorkIdsToPrev{$cid} = $id;
                     main::DEBUGLOG && $log->is_debug && $log->debug("WORK ${composer}:${composerId}/${title} :: ${cid} -> ${id}");
                     if (WRITE_CHANGES) {
-                        #my $usql = $currDbh->prepare_cached( qq{UPDATE works SET id = ? WHERE composer = ? AND title = ?} );
-                        #$usql->execute($id, $composerId, $title);
                         my $usql = $currDbh->prepare_cached( qq{UPDATE works SET id = ? WHERE id = ?} );
                         $usql->execute($id, $cid);
                         $usql->finish();
@@ -478,8 +465,6 @@ sub _setIds {
                         $currPlaylistTrackIdsToPrev{$cid} = $id;
                         main::DEBUGLOG && $log->is_debug && $log->debug("PLAYLIST_TRACK ${playlist}:${playlistId}/${track} :: ${cid} -> ${id}");
                         if (WRITE_CHANGES) {
-                            #my $usql = $currDbh->prepare_cached( qq{UPDATE playlist_track SET id = ? WHERE playlist = ? AND position = ? AND track = ?} );
-                            #$usql->execute($id, $playlistId, $position, $track);
                             my $usql = $currDbh->prepare_cached( qq{UPDATE playlist_track SET id = ? WHERE id = ?} );
                             $usql->execute($id, $cid);
                             $usql->finish();
@@ -561,7 +546,7 @@ sub _setIds {
         main::INFOLOG && $log->is_info && $log->info("Update track IDs in other tables");
         my $haveMLibTrack = _tableExists($currDbh, "multilibrary_track");
         foreach my $key (keys %currTrackIdsToPrev) {
-            my $to=$currTrackIdsToPrev{$key};
+            my $to = $currTrackIdsToPrev{$key};
             _updateTable($currDbh, "comments", "track", $key, $to);
             _updateTable($currDbh, "contributor_track", "track", $key, $to);
             _updateTable($currDbh, "genre_track", "track", $key, $to);
@@ -577,7 +562,7 @@ sub _setIds {
         main::INFOLOG && $log->is_info && $log->info("Update artist IDs in other tables");
         my $haveMLibContrib = _tableExists($currDbh, "multilibrary_contributor");
         foreach my $key (keys %currContribIdsToPrev) {
-            my $to=$currContribIdsToPrev{$key};
+            my $to = $currContribIdsToPrev{$key};
             _updateTable($currDbh, "tracks", "primary_artist", $key, $to);
             _updateTable($currDbh, "albums", "contributor", $key, $to);
             _updateTable($currDbh, "contributor_album", "contributor", $key, $to);
@@ -594,7 +579,7 @@ sub _setIds {
         main::INFOLOG && $log->is_info && $log->info("Update album IDs in other tables");
         my $haveMLibAlbum = _tableExists($currDbh, "multilibrary_album");
         foreach my $key (keys %currAlbumIdsToPrev) {
-            my $to=$currAlbumIdsToPrev{$key};
+            my $to = $currAlbumIdsToPrev{$key};
             _updateTable($currDbh, "tracks", "album", $key, $to);
             _updateTable($currDbh, "contributor_album", "album", $key, $to);
             _updateTable($currDbh, "library_album", "album", $key, $to);
@@ -608,7 +593,7 @@ sub _setIds {
         main::INFOLOG && $log->is_info && $log->info("Update genre IDs in other tables");
         my $haveMLibGenre = _tableExists($currDbh, "multilibrary_genre");
         foreach my $key (keys %currGenreIdsToPrev) {
-            my $to=$currGenreIdsToPrev{$key};
+            my $to = $currGenreIdsToPrev{$key};
             _updateTable($currDbh, "genre_track", "genre", $key, $to);
             _updateTable($currDbh, "library_genre", "genre", $key, $to);
             if ($haveMLibGenre) {
@@ -620,7 +605,7 @@ sub _setIds {
     if (%currWorkIdsToPrev) {
         main::INFOLOG && $log->is_info && $log->info("Update work IDs in other tables");
         foreach my $key (keys %currWorkIdsToPrev) {
-            my $to=$currWorkIdsToPrev{$key};
+            my $to = $currWorkIdsToPrev{$key};
             _updateTable($currDbh, "tracks", "work", $key, $to);
         }
     }
