@@ -11,6 +11,7 @@ package Plugins::PersistentIDs::Importer;
 use strict;
 use warnings;
 use utf8;
+use DBI;
 use Slim::Utils::Log;
 use Slim::Utils::Prefs;
 use Slim::Schema;
@@ -48,7 +49,7 @@ sub initPlugin {
                 unlink($copyPath);
             }
             if (-e $currPath) {
-                copy($currPath, $copyPath)
+                _copyDb($currPath, $copyPath);
             }
         } else {
             main::DEBUGLOG && $log->is_debug && $log->debug('Not a wipe-scan, so no need to restore IDs');
@@ -131,6 +132,15 @@ sub _checkIfWipe {
         $sql->finish();
     }
     return 1;
+}
+
+sub _copyDb {
+    my ($src, $dest) = @_;
+    my $dbh = DBI->connect("dbi:SQLite:dbname=${src}", "", "", { RaiseError => 0 });
+
+    # VACUUM INTO creates a consistent, compacted copy
+    $dbh->do("VACUUM INTO '${dest}'");
+    $dbh->disconnect();
 }
 
 sub _setNewIds {
