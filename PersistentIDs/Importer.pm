@@ -23,11 +23,6 @@ use constant PREV_NAME => "library-prev.db";
 my $log = Slim::Utils::Log::logger('plugin.persistentids');
 my $serverprefs = preferences('server');
 
-my %tracks = ();
-my %contributors = ();
-my %albums = ();
-my %genres = ();
-my %works = ();
 
 sub initPlugin {
     main::INFOLOG && $log->is_info && $log->info('Init');
