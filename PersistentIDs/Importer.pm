@@ -18,7 +18,7 @@ use Slim::Schema;
 use File::Copy;
 
 use constant CURR_NAME     => "library.db";
-use constant COPY_NAME     => "library-copy.db";
+use constant PREV_NAME     => "library-prev.db";
 use constant WRITE_CHANGES => 1;
 
 my $log = Slim::Utils::Log::logger('plugin.persistentids');
@@ -38,16 +38,16 @@ sub initPlugin {
         'use' => 1,
     });
     if (main::SCANNER) {
-        my $dbDir = $serverprefs->get('cachedir');
-        my $currPath = $dbDir . "/" . CURR_NAME;
         if (Slim::Music::Import->stillScanning() eq 'SETUP_WIPEDB') {
             main::INFOLOG && $log->is_info && $log->info('Is a wipe-scan, so copy DB before its wiped');
-            my $copyPath = $dbDir . "/" . COPY_NAME;
-            if (-e $copyPath) {
-                unlink($copyPath);
+            my $dbDir = $serverprefs->get('cachedir');
+            my $currPath = $dbDir . "/" . CURR_NAME;
+            my $prevPath = $dbDir . "/" . PREV_NAME;
+            if (-e $prevPath) {
+                unlink($prevPath);
             }
             if (-e $currPath) {
-                _copyDb($currPath, $copyPath);
+                _copyDb($currPath, $prevPath);
             }
         } else {
             main::INFOLOG && $log->is_info && $log->info('Not a wipe-scan, so no need to restore IDs');
@@ -60,7 +60,7 @@ sub startScan {
         my $class = shift;
         my $dbDir = $serverprefs->get('cachedir');
         my $currPath = $dbDir . "/" . CURR_NAME;
-        my $prevPath = $dbDir . "/" . COPY_NAME;
+        my $prevPath = $dbDir . "/" . PREV_NAME;
         if ((-e $currPath) && (-e $prevPath)) {
             main::INFOLOG && $log->is_info && $log->info('Starting ID re-write');
             my $currDbh = DBI->connect( "dbi:SQLite:dbname=${currPath}", '', '', { RaiseError => 1, AutoCommit => 0 });
