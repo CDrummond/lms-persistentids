@@ -2,7 +2,6 @@
 
 <extension>
 	<id>d2f37e3b-d5c2-4770-afc3-fa0475d70fd7</id>
-	<icon>plugins/PersistentIDs/html/images/persistentids.png</icon>
 	<name>PERSISTENTIDS</name>
 	<module>Plugins::PersistentIDs::Plugin</module>
 	<importmodule>Plugins::PersistentIDs::Importer</importmodule>
