@@ -183,14 +183,14 @@ sub _setNewIds {
     }
     $sql->finish();
     if (@ids) {
-        main::INFOLOG && $log->is_info && $log->info("UPDATING current IDS for ${table}");
+        main::INFOLOG && $log->is_info && $log->info("UPDATING current IDs for ${table}");
         foreach my $id (@ids) {
             $start += 1;
-            if ($id > $start) {
+            if ($id != $start) {
                 main::DEBUGLOG && $log->is_debug && $log->debug("CHANGE ${table} ${id} -> ${start}");
                 if (WRITE_CHANGES) {
-                    my $usql = $dbh->prepare_cached( qq{UPDATE $table SET id = ? WHERE id = ?} );
-                    $usql->execute($id, $start);
+                    my $usql = $dbh->prepare_cached( qq{UPDATE ${table} SET id = ? WHERE id = ?} );
+                    $usql->execute($start, $id);
                     $usql->finish();
                 }
                 $idHash->{$id} = $start;
@@ -544,7 +544,7 @@ sub _setIds {
     $sql->finish();
 
     #
-    # Try to reduce range of new IDS...
+    # Try to reduce range of new IDs...
     #
 
     main::INFOLOG && $log->is_info && $log->info("Re-assign any new IDs");
@@ -571,7 +571,7 @@ sub _setIds {
     }
 
     #
-    # Update any tables that might reference changed IDS..
+    # Update any tables that might reference changed IDs..
     #
 
     if (%currTrackIdsToPrev) {
