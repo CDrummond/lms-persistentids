@@ -270,8 +270,6 @@ sub _setIds {
                     my $usql = $currDbh->prepare_cached( qq{UPDATE tracks SET id = ? WHERE id = ?} );
                     $usql->execute($id, $cid);
                     $usql->finish();
-                } else {
-                    main::DEBUGLOG && $log->is_debug && $log->debug("TRACK NO CHANGE ${url} :: ${id}");
                 }
             }
             $csql->finish();
@@ -301,8 +299,6 @@ sub _setIds {
                         my $usql = $currDbh->prepare_cached( qq{UPDATE contributors SET id = ? WHERE id = ?} );
                         $usql->execute($id, $cid);
                         $usql->finish();
-                    } else {
-                        main::DEBUGLOG && $log->is_debug && $log->debug("ARTIST NO CHANGE ${mbid} -> ${id}");
                     }
                 }
                 $csql->finish();
@@ -319,8 +315,6 @@ sub _setIds {
                         my $usql = $currDbh->prepare_cached( qq{UPDATE contributors SET id = ? WHERE id = ?} );
                         $usql->execute($id, $cid);
                         $usql->finish();
-                    } else {
-                        main::DEBUGLOG && $log->is_debug && $log->debug("ARTIST NO CHANGE ${name} :: ${id}");
                     }
                 }
                 $csql->finish();
@@ -354,8 +348,6 @@ sub _setIds {
                         my $usql = $currDbh->prepare_cached( qq{UPDATE albums SET id = ? WHERE id = ?} );
                         $usql->execute($id, $cid);
                         $usql->finish();
-                    } else {
-                        main::DEBUGLOG && $log->is_debug && $log->debug("ALBUM NO CHANGE ${mbid} :: ${id}");
                     }
                 }
             } else {
@@ -388,8 +380,6 @@ sub _setIds {
                         my $usql = $currDbh->prepare_cached( qq{UPDATE albums SET id = ? WHERE id = ?} );
                         $usql->execute($id, $cid);
                         $usql->finish();
-                    } else {
-                        main::DEBUGLOG && $log->is_debug && $log->debug("ALBUM NO CHANGE ${dbg} :: ${id}");
                     }
                 }
                 $csql->finish();
@@ -417,8 +407,6 @@ sub _setIds {
                     my $usql = $currDbh->prepare_cached( qq{UPDATE genres SET id = ? WHERE id = ?} );
                     $usql->execute($id, $cid);
                     $usql->finish();
-                } else {
-                    main::DEBUGLOG && $log->is_debug && $log->debug("GENRE NO CHANGE ${name} :: ${id}");
                 }
             }
             $csql->finish();
@@ -447,8 +435,6 @@ sub _setIds {
                     my $usql = $currDbh->prepare_cached( qq{UPDATE works SET id = ? WHERE id = ?} );
                     $usql->execute($id, $cid);
                     $usql->finish();
-                } else {
-                    main::DEBUGLOG && $log->is_debug && $log->debug("WORK NO CHANGE ${composer}:${composerId}/${title} :: ${id}");
                 }
             }
             $csql->finish();
@@ -479,8 +465,6 @@ sub _setIds {
                         my $usql = $currDbh->prepare_cached( qq{UPDATE playlist_track SET id = ? WHERE id = ?} );
                         $usql->execute($id, $cid);
                         $usql->finish();
-                    } else {
-                        main::DEBUGLOG && $log->is_debug && $log->debug("PLAYLIST_TRACK NO CHANGE ${playlist}:${playlistId}/${track} :: ${id}");
                     }
                 }
                 $csql->finish();
@@ -510,8 +494,6 @@ sub _setIds {
                     my $usql = $currDbh->prepare_cached( qq{UPDATE comments SET id = ? WHERE id = ?} );
                     $usql->execute($id, $cid);
                     $usql->finish();
-                } else {
-                    main::DEBUGLOG && $log->is_debug && $log->debug("COMMENT NO CHANGE ${track}:${trackId} :: ${id}");
                 }
             }
             $csql->finish();
