@@ -38,10 +38,10 @@ sub initPlugin {
         'use' => 1,
     });
     if (main::SCANNER) {
-        if (Slim::Music::Import->stillScanning() eq 'SETUP_WIPEDB') {
+        my $dbDir = $serverprefs->get('cachedir');
+        my $currPath = $dbDir . "/" . CURR_NAME;
+        if (_isWipe($currPath)) {
             main::INFOLOG && $log->is_info && $log->info('Is a wipe-scan, so copy DB before its wiped');
-            my $dbDir = $serverprefs->get('cachedir');
-            my $currPath = $dbDir . "/" . CURR_NAME;
             my $prevPath = $dbDir . "/" . PREV_NAME;
             if (-e $prevPath) {
                 unlink($prevPath);
@@ -92,6 +92,23 @@ sub startScan {
     }
 }
 
+sub _isWipe {
+    my $path = shift;
+    my $foundSeq = 0;
+    if ((Slim::Music::Import->stillScanning() eq 'SETUP_WIPEDB') && (-e $path)) {
+        my $dbh = DBI->connect( "dbi:SQLite:dbname=${path}", '', '', { RaiseError => 0 });
+        my $sql = $dbh->prepare( qq{SELECT seq FROM sqlite_sequence WHERE name='tracks'} );
+        $sql->execute();
+        my $result = $sql->fetchrow_array();
+        if (defined $result) {
+            $foundSeq = 1;
+        }
+        $sql->finish();
+        $dbh->disconnect();
+    }
+    return $foundSeq;
+}
+
 sub _readPreviousSequences {
     my ($dbh) = @_;
     main::INFOLOG && $log->is_info && $log->info("Read sequence values from previous DB");
@@ -114,21 +131,33 @@ sub _checkIfWipe {
     my ($dbh, $seqs) = @_;
     main::INFOLOG && $log->is_info && $log->info("Check if this is a clear-all scan");
 
+    my $foundTracks = 0;
     my @keys = ("contributors", "albums", "tracks", "genres", "works", "playlist_track", "comments");
     foreach my $key (@keys) {
-        my $sql = $dbh->prepare( qq{SELECT MIN(id) FROM ${key} LIMIT 1} );
-        $sql->execute();
-        my $result = $sql->fetchrow_array();
-        if (defined $result) {
-            my $val = int($result);
-            if ($val < $seqs->{$key}) {
-                main::INFOLOG && $log->is_info && $log->info("Found a ${key} ID less then sequence. (${val} < $seqs->{$key})");
-                $sql->finish();
-                return 0;
+        if (exists $seqs->{$key}) {
+            my $sql = $dbh->prepare( qq{SELECT MIN(id) FROM ${key} LIMIT 1} );
+            $sql->execute();
+            my $result = $sql->fetchrow_array();
+            if (defined $result) {
+                my $val = int($result);
+                if ($val < $seqs->{$key}) {
+                    main::INFOLOG && $log->is_info && $log->info("Found a ${key} ID less then sequence. (${val} < $seqs->{$key})");
+                    $sql->finish();
+                    return 0;
+                }
+            }
+            $sql->finish();
+            if ($key eq "tracks") {
+                $foundTracks = 1;
             }
         }
-        $sql->finish();
     }
+
+    if (!$foundTracks) {
+        main::INFOLOG && $log->is_info && $log->info('Previous tracks sequence not found');
+        return 0;
+    }
+
     return 1;
 }
 
