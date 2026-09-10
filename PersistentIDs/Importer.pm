@@ -638,11 +638,33 @@ sub _setIds {
     }
 
     # 
-    # DONE
+    # Check for foreight key violations...
     #
 
     $currDbh->do('PRAGMA foreign_keys = ON');
-    $currDbh->commit();
+
+    $sql = $currDbh->prepare("PRAGMA foreign_key_check");
+    $sql->execute();
+    my $foundError = 0;
+
+    while (my @row = $sql->fetchrow_array) {
+        my ($table, $rowid, $parent, $fkid) = @row;
+        $log->is_error && $log->error("Forein keys failure, Table '$table', RowID '$rowid' references missing parent '$parent' (Foreign key ID: $fkid)");
+        $foundError = 1;
+    }
+    $sql->finish();
+
+    #
+    # DONE
+    #
+
+    if ($foundError) {
+        main::INFOLOG && $log->is_info && $log->info("Rolling back changes");
+        $currDbh->rollback();
+    } else {
+        main::INFOLOG && $log->is_info && $log->info("Commiting changes");
+        $currDbh->commit();
+    }
 }
 
 1;
