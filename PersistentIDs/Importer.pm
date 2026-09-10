@@ -17,11 +17,9 @@ use Slim::Utils::Prefs;
 use Slim::Schema;
 use File::Copy;
 
-use constant CURR_NAME  => "library.db";
-use constant COPY_NAME  => "library-copy.db";
-
+use constant CURR_NAME     => "library.db";
+use constant COPY_NAME     => "library-copy.db";
 use constant WRITE_CHANGES => 1;
-use constant VERBOSE_LOGGING => 0;
 
 my $log = Slim::Utils::Log::logger('plugin.persistentids');
 my $serverprefs = preferences('server');
@@ -33,7 +31,7 @@ my %genres = ();
 my %works = ();
 
 sub initPlugin {
-    main::DEBUGLOG && $log->is_debug && $log->debug('Init');
+    main::INFOLOG && $log->is_info && $log->info('Init');
     Slim::Music::Import->addImporter('Plugins::PersistentIDs::Importer', {
         'type' => 'post',
         'weight' => 0,
@@ -43,7 +41,7 @@ sub initPlugin {
         my $dbDir = $serverprefs->get('cachedir');
         my $currPath = $dbDir . "/" . CURR_NAME;
         if (Slim::Music::Import->stillScanning() eq 'SETUP_WIPEDB') {
-            main::DEBUGLOG && $log->is_debug && $log->debug('Is a wipe-scan, so copy DB before its wiped');
+            main::INFOLOG && $log->is_info && $log->info('Is a wipe-scan, so copy DB before its wiped');
             my $copyPath = $dbDir . "/" . COPY_NAME;
             if (-e $copyPath) {
                 unlink($copyPath);
@@ -52,7 +50,7 @@ sub initPlugin {
                 _copyDb($currPath, $copyPath);
             }
         } else {
-            main::DEBUGLOG && $log->is_debug && $log->debug('Not a wipe-scan, so no need to restore IDs');
+            main::INFOLOG && $log->is_info && $log->info('Not a wipe-scan, so no need to restore IDs');
         }
     }
 }
@@ -64,7 +62,7 @@ sub startScan {
         my $currPath = $dbDir . "/" . CURR_NAME;
         my $prevPath = $dbDir . "/" . COPY_NAME;
         if ((-e $currPath) && (-e $prevPath)) {
-            main::DEBUGLOG && $log->is_debug && $log->debug('Starting ID re-write');
+            main::INFOLOG && $log->is_info && $log->info('Starting ID re-write');
             my $currDbh = DBI->connect( "dbi:SQLite:dbname=${currPath}", '', '', { RaiseError => 1, AutoCommit => 0 });
             my $prevDbh = DBI->connect( "dbi:SQLite:dbname=${prevPath}", '', '', { RaiseError => 0 });
             my $seqs = _readPreviousSequences($prevDbh);
@@ -73,7 +71,7 @@ sub startScan {
                 if ($isWipe>0) {
                     _setIds($currDbh, $prevDbh, $seqs);
                 } else {
-                    main::DEBUGLOG && $log->is_debug && $log->debug('Not a clear-all scan, so no need to restore IDs');
+                    main::INFOLOG && $log->is_info && $log->info('Not a clear-all scan, so no need to restore IDs');
                 }
             };
             if ($@) {
@@ -83,9 +81,9 @@ sub startScan {
 
             $currDbh->disconnect();
             $prevDbh->disconnect();
-            main::DEBUGLOG && $log->is_debug && $log->debug("Finished");
+            main::INFOLOG && $log->is_info && $log->info("Finished");
         } else {
-            main::DEBUGLOG && $log->is_debug && $log->debug('DBs not found');
+            main::INFOLOG && $log->is_info && $log->info('DBs not found');
         }
         if (-e $prevPath) {
             unlink($prevPath);
@@ -96,7 +94,7 @@ sub startScan {
 
 sub _readPreviousSequences {
     my ($dbh) = @_;
-    main::DEBUGLOG && $log->is_debug && $log->debug("Read sequence values from previous DB");
+    main::INFOLOG && $log->is_info && $log->info("Read sequence values from previous DB");
     my $sql = $dbh->prepare( qq{SELECT name, seq FROM sqlite_sequence} );
     my %seqs = ();
     $sql->execute();
@@ -105,7 +103,7 @@ sub _readPreviousSequences {
             my $name = $res->{'name'};
             my $seq = int($res->{'seq'} || 0);
             $seqs{$name} = $seq;
-            main::DEBUGLOG && $log->is_debug && $log->debug(" ... ${name} -> ${seq}");
+            main::INFOLOG && $log->is_info && $log->info(" ... ${name} -> ${seq}");
         }
     }
     $sql->finish();
@@ -114,7 +112,7 @@ sub _readPreviousSequences {
 
 sub _checkIfWipe {
     my ($dbh, $seqs) = @_;
-    main::DEBUGLOG && $log->is_debug && $log->debug("Check if this is a clear-all scan");
+    main::INFOLOG && $log->is_info && $log->info("Check if this is a clear-all scan");
 
     my @keys = ("contributors", "albums", "tracks", "genres", "works", "playlist_track", "comments");
     foreach my $key (@keys) {
@@ -124,7 +122,7 @@ sub _checkIfWipe {
         if (defined $result) {
             my $val = int($result);
             if ($val < $seqs->{$key}) {
-                main::DEBUGLOG && $log->is_debug && $log->debug("Found a ${key} ID less then sequence. (${val} < $seqs->{$key})");
+                main::INFOLOG && $log->is_info && $log->info("Found a ${key} ID less then sequence. (${val} < $seqs->{$key})");
                 $sql->finish();
                 return 0;
             }
@@ -156,11 +154,11 @@ sub _setNewIds {
     }
     $sql->finish();
     if (@ids) {
-        main::DEBUGLOG && $log->is_debug && $log->debug("UPDATING current IDS for ${table}");
+        main::INFOLOG && $log->is_info && $log->info("UPDATING current IDS for ${table}");
         foreach my $id (@ids) {
             $start += 1;
             if ($id > $start) {
-                main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("CHANGE ${table} ${id} -> ${start}");
+                main::DEBUGLOG && $log->is_debug && $log->debug("CHANGE ${table} ${id} -> ${start}");
                 if (WRITE_CHANGES) {
                     my $usql = $dbh->prepare_cached( qq{UPDATE $table SET id = ? WHERE id = ?} );
                     $usql->execute($id, $start);
@@ -205,7 +203,7 @@ sub _updateSequence {
 
 sub _setIds {
     my ($currDbh, $prevDbh, $seqs) = @_;
-    main::DEBUGLOG && $log->is_debug && $log->debug("Restore IDs");
+    main::INFOLOG && $log->is_info && $log->info("Restore IDs");
 
     #$currDbh->do('BEGIN IMMEDIATE');
     $currDbh->do('PRAGMA foreign_keys = OFF');
@@ -227,7 +225,7 @@ sub _setIds {
     my $changed = 0;
 
     # Tracks
-    main::DEBUGLOG && $log->is_debug && $log->debug("Restore track IDs");
+    main::INFOLOG && $log->is_info && $log->info("Restore track IDs");
     my $sql = $prevDbh->prepare( qq{SELECT id, url FROM tracks ORDER BY id} );
     $sql->execute();
     if ( my $result = $sql->fetchall_arrayref({}) ) {
@@ -242,7 +240,7 @@ sub _setIds {
                 if ($cid != $id) {
                     $currTrackIdsToPrev{$cid} = $id;
                     $prevTrackIdsToCurr{$id} = $cid;
-                    main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("TRACK ${url} :: ${cid} -> ${id}");
+                    main::DEBUGLOG && $log->is_debug && $log->debug("TRACK ${url} :: ${cid} -> ${id}");
                     if (WRITE_CHANGES) {
                         #my $usql = $currDbh->prepare_cached( qq{UPDATE tracks SET id = ? WHERE url = ?} );
                         #$usql->execute($id, $url);
@@ -251,7 +249,7 @@ sub _setIds {
                         $usql->finish();
                     }
                 } else {
-                    main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("TRACK NO CHANGE ${url} :: ${id}");
+                    main::DEBUGLOG && $log->is_debug && $log->debug("TRACK NO CHANGE ${url} :: ${id}");
                 }
             }
             $csql->finish();
@@ -260,7 +258,7 @@ sub _setIds {
     $sql->finish();
 
     # Artists
-    main::DEBUGLOG && $log->is_debug && $log->debug("Restore artist IDs");
+    main::INFOLOG && $log->is_info && $log->info("Restore artist IDs");
     $sql = $prevDbh->prepare( qq{SELECT id, musicbrainz_id, name FROM contributors ORDER BY id} );
     $sql->execute();
     if ( my $result = $sql->fetchall_arrayref({}) ) {
@@ -277,7 +275,7 @@ sub _setIds {
                     if ($cid != $id) {
                         $currContribIdsToPrev{$cid} = $id;
                         $prevContribIdsToCurr{$id} = $cid;
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("ARTIST ${mbid} :: ${cid} -> ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("ARTIST ${mbid} :: ${cid} -> ${id}");
                         if (WRITE_CHANGES) {
                             #my $usql = $currDbh->prepare_cached( qq{UPDATE contributors SET id = ? WHERE musicbrainz_id = ?} );
                             #$usql->execute($id, $mbid);
@@ -286,7 +284,7 @@ sub _setIds {
                             $usql->finish();
                         }
                     } else {
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("ARTIST NO CHANGE ${mbid} -> ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("ARTIST NO CHANGE ${mbid} -> ${id}");
                     }
                 }
                 $csql->finish();
@@ -299,7 +297,7 @@ sub _setIds {
                     if ($cid != $id) {
                         $currContribIdsToPrev{$cid} = $id;
                         $prevContribIdsToCurr{$id} = $cid;
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("ARTIST ${name} :: ${cid} -> ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("ARTIST ${name} :: ${cid} -> ${id}");
                         if (WRITE_CHANGES) {
                             #my $usql = $currDbh->prepare_cached( qq{UPDATE contributors SET id = ? WHERE name = ?} );
                             #$usql->execute($id, $name);
@@ -308,7 +306,7 @@ sub _setIds {
                             $usql->finish();
                         }
                     } else {
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("ARTIST NO CHANGE ${name} :: ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("ARTIST NO CHANGE ${name} :: ${id}");
                     }
                 }
                 $csql->finish();
@@ -318,7 +316,7 @@ sub _setIds {
     $sql->finish();
 
     # Albums
-    main::DEBUGLOG && $log->is_debug && $log->debug("Restore album IDs");
+    main::INFOLOG && $log->is_info && $log->info("Restore album IDs");
     $sql = $prevDbh->prepare( qq{SELECT id, musicbrainz_id, title, year, disc, contributor FROM albums ORDER BY id} );
     $sql->execute();
     if ( my $result = $sql->fetchall_arrayref({}) ) {
@@ -338,7 +336,7 @@ sub _setIds {
                     my $cid = int($result);
                     if ($cid != $id) {
                         $currAlbumIdsToPrev{$cid} = $id;
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("ALBUM ${mbid} :: ${cid} -> ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("ALBUM ${mbid} :: ${cid} -> ${id}");
                         if (WRITE_CHANGES) {
                             #my $usql = $currDbh->prepare_cached( qq{UPDATE albums SET id = ? WHERE musicbrainz_id = ?} );
                             #$usql->execute($id, $mbid);
@@ -347,7 +345,7 @@ sub _setIds {
                             $usql->finish();
                         }
                     } else {
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("ALBUM NO CHANGE ${mbid} :: ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("ALBUM NO CHANGE ${mbid} :: ${id}");
                     }
                 }
             } else {
@@ -376,14 +374,14 @@ sub _setIds {
                     my $cid = int($result);
                     if ($cid != $id) {
                         $currAlbumIdsToPrev{$cid} = $id;
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("ALBUM ${dbg} :: ${cid} -> ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("ALBUM ${dbg} :: ${cid} -> ${id}");
                         if (WRITE_CHANGES) {
                             my $usql = $currDbh->prepare_cached( qq{UPDATE albums SET id = ? WHERE id = ?} );
                             $usql->execute($id, $cid);
                             $usql->finish();
                         }
                     } else {
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("ALBUM NO CHANGE ${dbg} :: ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("ALBUM NO CHANGE ${dbg} :: ${id}");
                     }
                 }
                 $csql->finish();
@@ -393,7 +391,7 @@ sub _setIds {
     $sql->finish();
 
     # Genres
-    main::DEBUGLOG && $log->is_debug && $log->debug("Restore genre IDs");
+    main::INFOLOG && $log->is_info && $log->info("Restore genre IDs");
     $sql = $prevDbh->prepare( qq{SELECT id, name FROM genres ORDER BY id} );
     $sql->execute();
     if ( my $result = $sql->fetchall_arrayref({}) ) {
@@ -407,7 +405,7 @@ sub _setIds {
                 my $cid = int($result);
                 if ($cid != $id) {
                     $currGenreIdsToPrev{$cid} = $id;
-                    main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("GENRE ${name} :: ${cid} -> ${id}");
+                    main::DEBUGLOG && $log->is_debug && $log->debug("GENRE ${name} :: ${cid} -> ${id}");
                     if (WRITE_CHANGES) {
                         #my $usql = $currDbh->prepare_cached( qq{UPDATE genres SET id = ? WHERE name = ?} );
                         #$usql->execute($id, $name);
@@ -416,7 +414,7 @@ sub _setIds {
                         $usql->finish();
                     }
                 } else {
-                    main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("GENRE NO CHANGE ${name} :: ${id}");
+                    main::DEBUGLOG && $log->is_debug && $log->debug("GENRE NO CHANGE ${name} :: ${id}");
                 }
             }
             $csql->finish();
@@ -425,7 +423,7 @@ sub _setIds {
     $sql->finish();
 
     # Works
-    main::DEBUGLOG && $log->is_debug && $log->debug("Restore work IDs");
+    main::INFOLOG && $log->is_info && $log->info("Restore work IDs");
     $sql = $prevDbh->prepare( qq{SELECT id, composer, title FROM works ORDER BY id} );
     $sql->execute();
     if ( my $result = $sql->fetchall_arrayref({}) ) {
@@ -441,7 +439,7 @@ sub _setIds {
                 my $cid = int($result);
                 if ($cid != $id) {
                     $currWorkIdsToPrev{$cid} = $id;
-                    main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("WORK ${composer}:${composerId}/${title} :: ${cid} -> ${id}");
+                    main::DEBUGLOG && $log->is_debug && $log->debug("WORK ${composer}:${composerId}/${title} :: ${cid} -> ${id}");
                     if (WRITE_CHANGES) {
                         #my $usql = $currDbh->prepare_cached( qq{UPDATE works SET id = ? WHERE composer = ? AND title = ?} );
                         #$usql->execute($id, $composerId, $title);
@@ -450,7 +448,7 @@ sub _setIds {
                         $usql->finish();
                     }
                 } else {
-                    main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("WORK NO CHANGE ${composer}:${composerId}/${title} :: ${id}");
+                    main::DEBUGLOG && $log->is_debug && $log->debug("WORK NO CHANGE ${composer}:${composerId}/${title} :: ${id}");
                 }
             }
             $csql->finish();
@@ -460,7 +458,7 @@ sub _setIds {
 
 
     # Playlist Tracks
-    main::DEBUGLOG && $log->is_debug && $log->debug("Restore playlist-track IDs");
+    main::INFOLOG && $log->is_info && $log->info("Restore playlist-track IDs");
     $sql = $prevDbh->prepare( qq{SELECT id, position, playlist, track FROM playlist_track ORDER BY id} );
     $sql->execute();
     if ( my $result = $sql->fetchall_arrayref({}) ) {
@@ -478,7 +476,7 @@ sub _setIds {
                     my $cid = int($result);
                     if ($result != $id) {
                         $currPlaylistTrackIdsToPrev{$cid} = $id;
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("PLAYLIST_TRACK ${playlist}:${playlistId}/${track} :: ${cid} -> ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("PLAYLIST_TRACK ${playlist}:${playlistId}/${track} :: ${cid} -> ${id}");
                         if (WRITE_CHANGES) {
                             #my $usql = $currDbh->prepare_cached( qq{UPDATE playlist_track SET id = ? WHERE playlist = ? AND position = ? AND track = ?} );
                             #$usql->execute($id, $playlistId, $position, $track);
@@ -487,7 +485,7 @@ sub _setIds {
                             $usql->finish();
                         }
                     } else {
-                        main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("PLAYLIST_TRACK NO CHANGE ${playlist}:${playlistId}/${track} :: ${id}");
+                        main::DEBUGLOG && $log->is_debug && $log->debug("PLAYLIST_TRACK NO CHANGE ${playlist}:${playlistId}/${track} :: ${id}");
                     }
                 }
                 $csql->finish();
@@ -497,7 +495,7 @@ sub _setIds {
     $sql->finish();
 
     # Comments
-    main::DEBUGLOG && $log->is_debug && $log->debug("Restore comment IDs");
+    main::INFOLOG && $log->is_info && $log->info("Restore comment IDs");
     $sql = $prevDbh->prepare( qq{SELECT id, track, value FROM comments ORDER BY id} );
     $sql->execute();
     if ( my $result = $sql->fetchall_arrayref({}) ) {
@@ -513,14 +511,14 @@ sub _setIds {
                 my $cid = int($result);
                 if ($cid != $id) {
                     $currCommentIdsToPrev{$cid} = $id;
-                    main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("COMMENT ${track}:${trackId} :: ${cid} -> ${id}");
+                    main::DEBUGLOG && $log->is_debug && $log->debug("COMMENT ${track}:${trackId} :: ${cid} -> ${id}");
                     if (WRITE_CHANGES) {
                         my $usql = $currDbh->prepare_cached( qq{UPDATE comments SET id = ? WHERE id = ?} );
                         $usql->execute($id, $cid);
                         $usql->finish();
                     }
                 } else {
-                    main::DEBUGLOG && VERBOSE_LOGGING && $log->is_debug && $log->debug("COMMENT NO CHANGE ${track}:${trackId} :: ${id}");
+                    main::DEBUGLOG && $log->is_debug && $log->debug("COMMENT NO CHANGE ${track}:${trackId} :: ${id}");
                 }
             }
             $csql->finish();
@@ -532,7 +530,7 @@ sub _setIds {
     # Try to reduce range of new IDS...
     #
 
-    main::DEBUGLOG && $log->is_debug && $log->debug("Re-assign any new IDs");
+    main::INFOLOG && $log->is_info && $log->info("Re-assign any new IDs");
     if (%currTrackIdsToPrev) {
         _setNewIds($currDbh, "tracks", $seqs->{"tracks"}, \%currTrackIdsToPrev);
     }
@@ -560,7 +558,7 @@ sub _setIds {
     #
 
     if (%currTrackIdsToPrev) {
-        main::DEBUGLOG && $log->is_debug && $log->debug("Update track IDs in other tables");
+        main::INFOLOG && $log->is_info && $log->info("Update track IDs in other tables");
         my $haveMLibTrack = _tableExists($currDbh, "multilibrary_track");
         foreach my $key (keys %currTrackIdsToPrev) {
             my $to=$currTrackIdsToPrev{$key};
@@ -576,7 +574,7 @@ sub _setIds {
     }
 
     if (%currContribIdsToPrev) {
-        main::DEBUGLOG && $log->is_debug && $log->debug("Update artist IDs in other tables");
+        main::INFOLOG && $log->is_info && $log->info("Update artist IDs in other tables");
         my $haveMLibContrib = _tableExists($currDbh, "multilibrary_contributor");
         foreach my $key (keys %currContribIdsToPrev) {
             my $to=$currContribIdsToPrev{$key};
@@ -593,7 +591,7 @@ sub _setIds {
     }
 
     if (%currAlbumIdsToPrev) {
-        main::DEBUGLOG && $log->is_debug && $log->debug("Update album IDs in other tables");
+        main::INFOLOG && $log->is_info && $log->info("Update album IDs in other tables");
         my $haveMLibAlbum = _tableExists($currDbh, "multilibrary_album");
         foreach my $key (keys %currAlbumIdsToPrev) {
             my $to=$currAlbumIdsToPrev{$key};
@@ -607,7 +605,7 @@ sub _setIds {
     }
 
     if (%currGenreIdsToPrev) {
-        main::DEBUGLOG && $log->is_debug && $log->debug("Update genre IDs in other tables");
+        main::INFOLOG && $log->is_info && $log->info("Update genre IDs in other tables");
         my $haveMLibGenre = _tableExists($currDbh, "multilibrary_genre");
         foreach my $key (keys %currGenreIdsToPrev) {
             my $to=$currGenreIdsToPrev{$key};
@@ -620,7 +618,7 @@ sub _setIds {
     }
 
     if (%currWorkIdsToPrev) {
-        main::DEBUGLOG && $log->is_debug && $log->debug("Update work IDs in other tables");
+        main::INFOLOG && $log->is_info && $log->info("Update work IDs in other tables");
         foreach my $key (keys %currWorkIdsToPrev) {
             my $to=$currWorkIdsToPrev{$key};
             _updateTable($currDbh, "tracks", "work", $key, $to);
@@ -631,7 +629,7 @@ sub _setIds {
     # Update sqlite_sequence
     #
 
-    main::DEBUGLOG && $log->is_debug && $log->debug("Update sqlite_sequence");
+    main::INFOLOG && $log->is_info && $log->info("Update sqlite_sequence");
     if (%currTrackIdsToPrev) {
         _updateSequence($currDbh, "tracks");
     }
