@@ -41,7 +41,7 @@ sub initPlugin {
     if (main::SCANNER) {
         my $dbDir = $serverprefs->get('cachedir');
         my $currPath = $dbDir . "/" . CURR_NAME;
-        if (_isWipe($currPath)) {
+        if (Slim::Music::Import->stillScanning() eq 'SETUP_WIPEDB') {
             main::DEBUGLOG && $log->is_debug && $log->debug('Is a wipe-scan, so copy DB before its wiped');
             my $copyPath = $dbDir . "/" . COPY_NAME;
             if (-e $copyPath) {
@@ -54,24 +54,6 @@ sub initPlugin {
             main::DEBUGLOG && $log->is_debug && $log->debug('Not a wipe-scan, so no need to restore IDs');
         }
     }
-}
-
-sub _isWipe {
-    my $path = shift;
-    my $dbh = DBI->connect( "dbi:SQLite:dbname=${path}", '', '', { RaiseError => 0  });
-    my $sql = $dbh->prepare( qq{SELECT value FROM metainformation WHERE name = 'isScanning' LIMIT 1} );
-    my $isWipeScan = 0;
-    if ($sql) {
-        $sql->execute();
-        my $result = $sql->fetchrow_array();
-        if (defined $result) {
-            main::DEBUGLOG && $log->is_debug && $log->debug("Scan type: ${result}");
-            return $result eq "SETUP_WIPEDB";
-        }
-        $sql->finish();
-    }
-    $dbh->disconnect();
-    return $isWipeScan;
 }
 
 sub startScan {
