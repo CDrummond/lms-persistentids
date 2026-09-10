@@ -201,9 +201,12 @@ sub _setNewIds {
 
 sub _updateTable {
     my ($dbh, $table, $column, $from, $to) = @_;
-    my $sql = $dbh->prepare_cached( qq{UPDATE ${table} SET ${column} = ? WHERE ${column} = ?} );
-    $sql->execute($to, $from);
-    $sql->finish;
+    if ($to < $from) {
+        my $sql = $dbh->prepare_cached( qq{UPDATE ${table} SET ${column} = ? WHERE ${column} = ?} );
+        main::INFOLOG && $log->is_info && $log->info("UPDATE ${table} SET ${column} = ${to} WHERE ${column} = ${from}");
+        $sql->execute($to, $from);
+        $sql->finish;
+    }
 }
 
 sub _tableExists {
